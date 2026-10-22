@@ -6,6 +6,7 @@ dependencies = [
     "av<19",
     "fastapi>=0.159.1",
     "faster-whisper>=1.2.1",
+    "groq>=1.7.0",
     "pydantic>=2.14.1",
     "python-dotenv>=1.2.4",
     "python-multipart>=0.0.32",
