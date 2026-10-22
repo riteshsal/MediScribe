@@ -5,6 +5,9 @@ const VAD_THRESHOLD = 0.025;
 
 const startBtn = document.getElementById("startBtn");
 const stopBtn = document.getElementById("stopBtn");
+const chunkCount = document.getElementById("chunkCount");
+const liveTranscript = document.getElementById("liveTranscript");
+const clearSummaryBtn = document.getElementById("clearSummaryBtn");
 const clearBtn = document.getElementById("clearBtn");
 const saveBtn = document.getElementById("saveBtn");
 const processBtn = document.getElementById("processBtn");
@@ -153,9 +156,12 @@ async function transcribeSegment(samples) {
         }
 
         const result = await response.json();
+        chunkCount.textContent = Number(chunkCount.textContent) + 1;
         const text = (result.transcript || "").trim();
 
         if (text) {
+            liveTranscript.textContent = text;
+
             transcriptText = transcriptText
                 ? `${transcriptText} ${text}`
                 : text;
@@ -411,3 +417,231 @@ startBtn.addEventListener("click", startRecording);
 stopBtn.addEventListener("click", stopRecording);
 clearBtn.addEventListener("click", clearRecording);
 saveBtn.addEventListener("click", saveRecording);
+
+
+function renderList(items) {
+    if (!Array.isArray(items) || items.length === 0) {
+        return "<li>Not mentioned</li>";
+    }
+
+    return items.map(item => {
+        const li = document.createElement("li");
+        li.textContent = String(item);
+        return li.outerHTML;
+    }).join("");
+}
+
+function renderSummary(data) {
+    const patient = data.patient_details || {};
+
+    summaryContentEl.replaceChildren();
+
+    const sections = [
+        {
+            title: "Patient Details",
+            content: `Name: ${patient.name || "Not mentioned"}\nAge: ${patient.age || "Not mentioned"}\nGender: ${patient.gender || "Not mentioned"}`,
+            type: "text"
+        },
+        {
+            title: "Clinical Summary",
+            content: data.summary || "Not mentioned",
+            type: "text"
+        },
+        {
+            title: "Chief Complaints",
+            content: data.chief_complaints,
+            type: "list"
+        },
+        {
+            title: "Clinical Impression",
+            content: data.clinical_impression,
+            type: "list"
+        },
+        {
+            title: "Medications",
+            content: data.medications,
+            type: "list"
+        },
+        {
+            title: "Allergies",
+            content: data.allergies,
+            type: "list"
+        },
+        {
+            title: "Examinations & Tests",
+            content: data.examinations_and_tests,
+            type: "list"
+        },
+        {
+            title: "Past Medical History",
+            content: data.past_medical_history,
+            type: "list"
+        },
+        {
+            title: "Follow-up",
+            content: data.follow_up,
+            type: "list"
+        }
+    ];
+
+    for (const section of sections) {
+        const article = document.createElement("article");
+        article.className = "summary-section";
+
+        const heading = document.createElement("h3");
+        heading.textContent = section.title;
+        article.appendChild(heading);
+
+        if (section.type === "list") {
+            const ul = document.createElement("ul");
+            ul.innerHTML = renderList(section.content);
+            article.appendChild(ul);
+        } else {
+            const paragraph = document.createElement("p");
+            paragraph.style.whiteSpace = "pre-line";
+            paragraph.textContent = section.content;
+            article.appendChild(paragraph);
+        }
+
+        summaryContentEl.appendChild(article);
+    }
+}
+
+async function processTranscriptWithAI() {
+    const transcript = transcriptText.trim();
+
+    if (!transcript) {
+        alert("Please record a consultation or enter a transcript first.");
+        return;
+    }
+
+    processBtn.disabled = true;
+    processStatusEl.textContent = "Generating clinical summary...";
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/summarize`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ transcript })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                result.detail || "Could not generate the clinical summary."
+            );
+        }
+
+        if (!result.clinical_summary) {
+            throw new Error("The AI response did not contain a clinical summary.");
+        }
+
+        summaryData = result.clinical_summary;
+        renderSummary(summaryData);
+
+        copyBtn.disabled = false;
+        processStatusEl.textContent =
+            "Summary generated. Please review all details for accuracy.";
+
+    } catch (error) {
+        console.error("Summary error:", error);
+        processStatusEl.textContent = error.message;
+    } finally {
+        processBtn.disabled = false;
+    }
+}
+
+processBtn.addEventListener("click", processTranscriptWithAI);
+
+
+
+async function copyPrescription() {
+    if (!summaryData) {
+        alert("Please generate a clinical summary first.");
+        return;
+    }
+
+    const patient = summaryData.patient_details || {};
+
+    const prescriptionText = `
+MEDISCRIBE — CLINICAL NOTES
+
+PATIENT DETAILS
+Name: ${patient.name || "Not mentioned"}
+Age: ${patient.age || "Not mentioned"}
+Gender: ${patient.gender || "Not mentioned"}
+
+CLINICAL SUMMARY
+${summaryData.summary || "Not mentioned"}
+
+CHIEF COMPLAINTS
+${(summaryData.chief_complaints || []).join("\n") || "Not mentioned"}
+
+CLINICAL IMPRESSION
+${(summaryData.clinical_impression || []).join("\n") || "Not mentioned"}
+
+MEDICATIONS
+${(summaryData.medications || []).join("\n") || "Not mentioned"}
+
+ALLERGIES
+${(summaryData.allergies || []).join("\n") || "Not mentioned"}
+
+EXAMINATIONS AND TESTS
+${(summaryData.examinations_and_tests || []).join("\n") || "Not mentioned"}
+
+PAST MEDICAL HISTORY
+${(summaryData.past_medical_history || []).join("\n") || "Not mentioned"}
+
+FOLLOW-UP
+${(summaryData.follow_up || []).join("\n") || "Not mentioned"}
+
+Note: AI-generated draft. Verify all information before clinical use.
+`.trim();
+
+    try {
+        await navigator.clipboard.writeText(prescriptionText);
+        processStatusEl.textContent =
+            "Clinical notes copied. Please verify them before use.";
+    } catch (error) {
+        console.error("Copy failed:", error);
+        processStatusEl.textContent =
+            "Could not copy automatically. Please use the browser's secure context and try again.";
+    }
+}
+
+copyBtn.addEventListener("click", copyPrescription);
+clearSummaryBtn.addEventListener("click", () => {
+    summaryData = null;
+
+    summaryContent.innerHTML = `
+        <div class="summary-empty">
+            <div class="empty-icon">✦</div>
+            <h3>No summary generated yet</h3>
+            <p>
+                Process a consultation transcript to generate
+                structured clinical documentation.
+            </p>
+        </div>
+    `;
+
+    copyBtn.disabled = true;
+    processStatus.textContent = "Summary cleared. Your transcript is unchanged.";
+});
+
+
+const helpBtn = document.getElementById("helpBtn");
+
+helpBtn.addEventListener("click", () => {
+    alert(
+        "MediScribe — AI-powered clinical documentation\n\n" +
+        "1. Start Mic and speak naturally.\n" +
+        "2. Stop recording when finished.\n" +
+        "3. Review the generated transcript.\n" +
+        "4. Click Process Transcript with AI.\n" +
+        "5. Review the clinical summary and copy your notes.\n\n" +
+        "Always have a qualified healthcare professional verify AI-generated documentation."
+    );
+});

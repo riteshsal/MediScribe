@@ -23,10 +23,11 @@
     </header>
 
     <main class="dashboard">
+        <!-- LEFT: LIVE TRANSCRIPTION -->
         <section class="panel transcription-panel">
             <div class="panel-heading">
                 <div>
-                    <h2>Live Transcription</h2>
+                    <h2>Live Medical Transcription</h2>
                     <p>Capture and transcribe your consultation</p>
                 </div>
                 <span class="tag">AUDIO INPUT</span>
@@ -34,7 +35,7 @@
 
             <div class="recording-controls">
                 <button id="startBtn" class="btn btn-primary">
-                    <span>●</span> Start Mic
+                    ● Start Mic
                 </button>
                 <button id="stopBtn" class="btn btn-danger" disabled>
                     ■ Stop
@@ -42,37 +43,39 @@
                 <button id="clearBtn" class="btn btn-secondary">
                     Clear
                 </button>
-                <button id="saveBtn" class="btn btn-secondary">
+                <button id="saveBtn" class="btn btn-save">
                     Save Recording
                 </button>
             </div>
 
             <div class="metrics">
                 <div class="metric-card">
-                    <span>Words</span>
+                    <span>WORDS</span>
                     <strong id="wordCount">0</strong>
                 </div>
                 <div class="metric-card">
-                    <span>Audio Duration</span>
-                    <strong id="duration">00:00</strong>
-                </div>
-                <div class="metric-card">
-                    <span>Voice Activity</span>
-                    <strong id="vadStatus">Inactive</strong>
+                    <span>CHUNKS</span>
+                    <strong id="chunkCount">0</strong>
                 </div>
             </div>
 
             <div class="transcript-area">
                 <div class="transcript-header">
-                    <h3>Consultation Transcript</h3>
+                    <h3>Live Medical Transcription</h3>
                     <span id="recordingStatus" class="recording-label">
                         ● Not recording
                     </span>
                 </div>
+
+                <div id="liveTranscript" class="live-transcript">
+                    <span class="live-indicator"></span>
+                    Live transcription will appear here...
+                </div>
+
                 <div id="transcript" class="transcript-content">
                     <p class="placeholder">
-                        Your consultation transcript will appear here.
-                        Click <strong>Start Mic</strong> to begin recording.
+                        Ready — click <strong>Start Mic</strong> and speak
+                        naturally. VAD will auto-chunk your speech.
                     </p>
                 </div>
             </div>
@@ -80,6 +83,7 @@
             <div class="panel-footer">
                 <span>Speech recognition: Whisper</span>
                 <span id="audioStatus">Microphone not started</span>
+                <span id="vadStatus">Inactive</span>
             </div>
 
             <button id="processBtn" class="btn btn-primary process-btn">
@@ -90,13 +94,16 @@
             </p>
         </section>
 
+        <!-- RIGHT: AI MEDICAL SUMMARY -->
         <section class="panel summary-panel">
-            <div class="panel-heading">
+            <div class="summary-heading">
                 <div>
-                    <h2>Clinical Summary</h2>
-                    <p>AI-generated structured documentation</p>
+                    <h2>AI Medical Summary</h2>
+                    <p>Structured clinical documentation</p>
                 </div>
-                <span class="tag">AI OUTPUT</span>
+                <button id="clearSummaryBtn" class="btn btn-secondary">
+                    Clear
+                </button>
             </div>
 
             <div id="summaryContent">
@@ -104,8 +111,8 @@
                     <div class="empty-icon">✦</div>
                     <h3>No summary generated yet</h3>
                     <p>
-                        Record a consultation and process the transcript
-                        to generate structured clinical documentation.
+                        Process a consultation transcript to generate
+                        structured clinical documentation.
                     </p>
                 </div>
             </div>
@@ -113,12 +120,18 @@
             <button id="copyBtn" class="btn btn-secondary copy-btn" disabled>
                 Copy to Prescription
             </button>
+
             <p class="disclaimer">
                 AI-generated documentation must be reviewed and verified
                 by a qualified healthcare professional.
             </p>
         </section>
     </main>
+
+    <button class="floating-action" id="helpBtn"
+            aria-label="MediScribe information" title="MediScribe">
+        ✦
+    </button>
 
     <script src="script.js"></script>
 </body>
