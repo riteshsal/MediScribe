@@ -30,7 +30,7 @@ class TranscriptionRequest(BaseModel):
     transcript: str = Field(..., min_length=1, description="Medical conversation transcript")
 
 whisper_model=WhisperModel(
-    "tiny",
+    "base",
     device="cpu",
     compute_type="int8"
 )
@@ -88,6 +88,8 @@ async def transcribe_audio(file: UploadFile = File(...)):
         segments, info = whisper_model.transcribe(
             temp_path,
             vad_filter=True,
+            beam_size=5,
+            condition_on_previous_text=False
         )
 
         transcript = " ".join(
