@@ -89,20 +89,22 @@ button {
 
 .dashboard {
     display: grid;
-    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
-    gap: 22px;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap: 24px;
     max-width: 1600px;
     margin: 0 auto;
     padding: 26px 30px;
-    align-items: start;
+    align-items: stretch;
 }
 
 .panel {
     min-width: 0;
+    height: 700px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 16px;
     padding: 24px;
+    box-sizing: border-box;
     box-shadow: 0 4px 18px rgba(34, 35, 70, 0.035);
 }
 
@@ -492,4 +494,19 @@ button {
         right: 16px;
         bottom: 16px;
     }
+}
+
+
+.dashboard > .panel {
+    height: 700px;
+    min-height: 700px;
+    max-height: none;
+    align-self: stretch;
+    box-sizing: border-box;
+}
+
+.summary-panel {
+    height: 700px;
+    min-height: 700px;
+    max-height: none;
 }

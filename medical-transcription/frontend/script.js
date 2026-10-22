@@ -33,7 +33,7 @@ let isProcessingAudio = false;
 let recordingStartTime = 0;
 let durationInterval = null;
 let vadAnimationId = null;
-
+let recordingSessionId = 0;
 let audioBuffer = [];
 let speechDetectedInSegment = false;
 let speechSegmentCount = 0;
@@ -140,6 +140,7 @@ function encodeWav(samples, sampleRate) {
 }
 
 async function transcribeSegment(samples) {
+    const sessionId = recordingSessionId;
     const wavBlob = encodeWav(samples, recordingSampleRate);
 
     const formData = new FormData();
@@ -156,6 +157,7 @@ async function transcribeSegment(samples) {
         }
 
         const result = await response.json();
+        if (sessionId !== recordingSessionId) return;
         chunkCount.textContent = Number(chunkCount.textContent) + 1;
         const text = (result.transcript || "").trim();
 
@@ -239,6 +241,7 @@ function handleAudioProcess(event) {
 
 async function startRecording() {
     try {
+        recordingSessionId++;
         mediaStream = await navigator.mediaDevices.getUserMedia({
             audio: {
                 echoCancellation: true,
@@ -270,10 +273,11 @@ async function startRecording() {
         speechDetectedInSegment = false;
         speechSegmentCount = 0;
         summaryData = null;
-
+        chunkCount.textContent = "0";
+        liveTranscript.textContent = "Live transcription will appear here...";
         isRecording = true;
         recordingStartTime = Date.now();
-
+        durationEl.textContent = "00:00";
         startBtn.disabled = true;
         stopBtn.disabled = false;
         processBtn.disabled = true;
