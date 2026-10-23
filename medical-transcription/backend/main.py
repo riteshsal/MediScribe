@@ -87,10 +87,11 @@ async def transcribe_audio(file: UploadFile = File(...)):
 
         segments, info = whisper_model.transcribe(
             temp_path,
+            language="en",
             vad_filter=True,
             beam_size=5,
             condition_on_previous_text=False,
-            initial_prompt="The speaker's name is Ritesh Salve. Common Indian names include Ritesh Salve.",
+            initial_prompt="Ritesh Salve"
         )
 
         transcript = " ".join(
