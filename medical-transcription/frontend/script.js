@@ -30,6 +30,7 @@ let silentGain = null;
 
 let isRecording = false;
 let isProcessingAudio = false;
+const audioSegmentQueue = [];
 let recordingStartTime = 0;
 let durationInterval = null;
 let vadAnimationId = null;
@@ -190,6 +191,27 @@ async function processAudioSegment(samples, hadSpeech) {
     }
 }
 
+
+function processNextAudioSegment() {
+    if (isProcessingAudio || audioSegmentQueue.length === 0) {
+        return;
+    }
+
+    isProcessingAudio = true;
+
+    const { samples, hadSpeech } = audioSegmentQueue.shift();
+
+    processAudioSegment(samples, hadSpeech)
+        .catch((error) => {
+            console.error("Audio segment processing error:", error);
+        })
+        .finally(() => {
+            isProcessingAudio = false;
+            processNextAudioSegment();
+        });
+}
+
+
 function handleAudioProcess(event) {
     if (!isRecording) return;
 
@@ -225,17 +247,8 @@ function handleAudioProcess(event) {
         speechDetectedInSegment = false;
 
         // Keep segment requests in order to avoid transcript reordering.
-        if (!isProcessingAudio) {
-            isProcessingAudio = true;
-            processAudioSegment(samples, hadSpeech)
-                .finally(() => {
-                    isProcessingAudio = false;
-                });
-        } else {
-            // Preserve the segment for the next processing cycle.
-            audioBuffer = [samples, ...audioBuffer];
-            speechDetectedInSegment = hadSpeech;
-        }
+        audioSegmentQueue.push({ samples, hadSpeech });
+        processNextAudioSegment();
     }
 }
 
@@ -269,6 +282,7 @@ async function startRecording() {
 
         audioBuffer = [];
         recordingParts = [];
+        audioSegmentQueue.length = 0;
         transcriptText = "";
         speechDetectedInSegment = false;
         speechSegmentCount = 0;
@@ -299,6 +313,7 @@ async function startRecording() {
     }
 }
 
+
 async function stopRecording() {
     if (!isRecording) return;
 
@@ -310,18 +325,30 @@ async function stopRecording() {
         durationInterval = null;
     }
 
-    // Process the final partial segment.
+    // Queue the final partial segment.
     const remainingSamples = mergeAudioBuffers(audioBuffer);
     const hadSpeech = speechDetectedInSegment;
+
     audioBuffer = [];
     speechDetectedInSegment = false;
 
     if (remainingSamples.length && hadSpeech) {
-        audioStatusEl.textContent = "Transcribing final segment...";
-        await transcribeSegment(remainingSamples);
+        audioSegmentQueue.push({
+            samples: remainingSamples,
+            hadSpeech: true
+        });
     }
 
-    // Store a WAV recording of the entire session for the Save button.
+    // Finish processing all queued segments in order.
+    if (!isProcessingAudio) {
+        processNextAudioSegment();
+    }
+
+    while (isProcessingAudio || audioSegmentQueue.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    // Store the complete recording for the Save button.
     const allSamples = mergeAudioBuffers(recordingParts);
     window.lastRecording = encodeWav(allSamples, recordingSampleRate);
 
@@ -335,8 +362,10 @@ async function stopRecording() {
     recordingStatusEl.style.color = "#777d91";
     audioStatusEl.textContent = "Recording stopped";
     vadStatusEl.textContent = "Inactive";
+
     renderTranscript();
 }
+
 
 function cleanupAudio() {
     if (processorNode) {

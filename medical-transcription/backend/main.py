@@ -89,7 +89,8 @@ async def transcribe_audio(file: UploadFile = File(...)):
             temp_path,
             vad_filter=True,
             beam_size=5,
-            condition_on_previous_text=False
+            condition_on_previous_text=False,
+            initial_prompt="The speaker's name is Ritesh Salve. Common Indian names include Ritesh Salve.",
         )
 
         transcript = " ".join(
